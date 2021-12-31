@@ -1,0 +1,164 @@
+package scm
+
+import (
+	"fmt"
+	"io"
+	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
+	"github.com/pkg/errors"
+	"github.com/whilp/git-urls"
+
+	"github.com/microhod/repo/internal/domain"
+	"github.com/microhod/repo/internal/path"
+)
+
+var cmd func(command string, args ...string) *exec.Cmd = exec.Command
+
+type Git struct {
+	DefaultRemotePrefix string
+}
+
+// ParseRepoFromRemote parses a repo object from the remote URL (as a raw string)
+func (git *Git) ParseRepoFromRemote(rawURL string) (*domain.Repo, error) {
+	remote, err := giturls.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
+	// use default prefix if giturls could not parse the remote url
+	if remote.Scheme == "file" {
+		rawURL = joinURL(git.DefaultRemotePrefix, rawURL)
+		remote, err = giturls.Parse(rawURL)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return git.parseRepoFromRemote(remote)
+}
+
+func (git *Git) parseRepoFromRemote(remote *url.URL) (*domain.Repo, error) {
+	repo := &domain.Repo{
+		Remote: remote,
+		Server: remote.Host,
+	}
+
+	// trim .git suffix
+	remote.Path = strings.TrimSuffix(remote.Path, ".git")
+
+	// assume url path ends with <owner>/<name>
+	// e.g. ssh://git@github.com/microhod/repo.git
+	//                           ^^^^^^^^^^^^^^
+	parts := strings.Split(remote.Path, "/")
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("url path has an invalid format, expected '.../<owner>/<name>' but got '%s'", remote.Path)
+	}
+	repo.Owner = parts[len(parts)-2]
+	repo.Name = parts[len(parts)-1]
+
+	return repo, nil
+}
+
+func (git *Git) getRemoteURL(path string) (string, error) {
+	remotes, err := git.exec(nil, "-C", path, "remote")
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(remotes) == "" {
+		return "", nil
+	}
+
+	names := strings.Split(remotes, "\n")
+	remote := names[0]
+	// default to 'origin' if it exists
+	for _, name := range names {
+		if name == "origin" {
+			remote = "origin"
+		}
+	}
+
+	url, err := git.exec(nil, "-C", path, "remote", "get-url", remote)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(url), nil
+}
+
+func (git *Git) Clone(repo *domain.Repo, path string, options *CloneOptions) error {
+	if options == nil {
+		options = &CloneOptions{}
+	}
+
+	_, err := git.exec(options.Progress, "clone", repo.Remote.String(), path)
+	if err != nil {
+		return err
+	}
+
+	repo.Local = path
+	return nil
+}
+
+func (git *Git) FindRepos(base string) ([]*domain.Repo, error) {
+	gitdirs, err := path.FindDir(base, ".git")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to find paths to git repos")
+	}
+
+	// remove '.git' from the end of the paths
+	paths := []string{}
+	for _, dir := range gitdirs {
+		paths = append(paths, filepath.Dir(dir))
+	}
+
+	repos := []*domain.Repo{}
+	for _, path := range paths {
+		remote, err := git.getRemoteURL(path)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get remote URL for repo '%s", path)
+		}
+		if remote == "" {
+			continue
+		}
+		repo, err := git.ParseRepoFromRemote(remote)
+		repo.Local = path
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse a repo object for path '%s", path)
+		}
+		repos = append(repos, repo)
+	}
+
+	return repos, nil
+}
+
+func joinURL(baseURL string, paths ...string) string {
+	baseURL = strings.TrimSuffix(baseURL, "/")
+	paths = append([]string{baseURL}, paths...)
+	for i := range paths {
+		paths[i] = strings.TrimPrefix(paths[i], "/")
+		paths[i] = strings.TrimSuffix(paths[i], "/")
+	}
+	return strings.Join(paths, "/")
+}
+
+func (git *Git) exec(progress io.Writer, args ...string) (string, error) {
+	cmd := cmd("git", args...)
+
+	cmd.Stdin = os.Stdin
+	stdout := new(strings.Builder)
+	cmd.Stdout = stdout
+	stderr := new(strings.Builder)
+	cmd.Stderr = stderr
+	if progress != nil {
+		cmd.Stderr = io.MultiWriter(stderr, progress)
+		cmd.Stdout = io.MultiWriter(stdout, progress)
+	}
+
+	if err := cmd.Run(); err != nil {
+		return stdout.String(), fmt.Errorf(stderr.String())
+	}
+
+	return stdout.String(), nil
+}
