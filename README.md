@@ -8,15 +8,27 @@ For example, `github.com/microhod/repo.git` would be stored at `~/src/github.com
 
 Run `repo --help` to see full CLI usage.
 
+```
+NAME:
+   repo - A cli application to organise scm repositories in a structured heirachy
+
+USAGE:
+   repo [global options] command [command options] [arguments...]
+
+COMMANDS:
+   clone     clone a repo
+   organise  organise all repos under the current path into a structured heirachy
+   help, h   Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --help, -h  show help (default: false)
+```
+
 ## Install
-
-### Precompiled Executables
-
-Grab the latest executable for your platform from [github releases](https://github.com/microhod/repo/releases) and put it on your `PATH`.
 
 ### Compile from Source
 
-* Install [golang](https://golang.org/doc/install) `1.17` or later
+* Install [golang](https://golang.org/doc/install) `1.22` or later
 * Run `go install github.com/microhod/repo@latest` to download and install the binary (this will install to `~/go/bin`)
 
 ## Config
