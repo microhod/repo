@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/olekukonko/tablewriter"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
 	"github.com/microhod/repo/internal/domain"
@@ -22,7 +21,7 @@ func (app *App) organise(ctx *cli.Context) error {
 	if basePath == "" {
 		basePath, err = os.Getwd()
 		if err != nil {
-			return errors.Wrap(err, "failed to get working directory")
+			return fmt.Errorf("geting working directory: %w", err)
 		}
 	}
 
@@ -32,7 +31,7 @@ func (app *App) organise(ctx *cli.Context) error {
 		return err
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to find repos")
+		return fmt.Errorf("finding repos: %w", err)
 	}
 
 	moves := []Move{}

@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/chainguard-dev/git-urls"
 
 	"github.com/microhod/repo/internal/domain"
@@ -104,7 +103,7 @@ func (git *Git) Clone(repo *domain.Repo, path string, options *CloneOptions) err
 func (git *Git) FindRepos(base string) ([]*domain.Repo, error) {
 	gitdirs, err := path.FindDir(base, ".git")
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to find paths to git repos")
+		return nil, fmt.Errorf("finding paths to git repos: %w", err)
 	}
 
 	// remove '.git' from the end of the paths
@@ -117,7 +116,7 @@ func (git *Git) FindRepos(base string) ([]*domain.Repo, error) {
 	for _, path := range paths {
 		remote, err := git.getRemoteURL(path)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get remote URL for repo '%s", path)
+			return nil, fmt.Errorf("getting remote URL for repo '%s': %w", path, err)
 		}
 		if remote == "" {
 			continue
@@ -125,7 +124,7 @@ func (git *Git) FindRepos(base string) ([]*domain.Repo, error) {
 		repo, err := git.ParseRepoFromRemote(remote)
 		repo.Local = path
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse a repo object for path '%s", path)
+			return nil, fmt.Errorf("parsing repo for path '%s': %w", path, err)
 		}
 		repos = append(repos, repo)
 	}

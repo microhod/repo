@@ -6,7 +6,6 @@ require (
 	github.com/briandowns/spinner v1.23.0
 	github.com/chainguard-dev/git-urls v1.0.2
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/pkg/errors v0.9.1
 	github.com/urfave/cli/v2 v2.27.1
 	golang.org/x/sync v0.6.0
 )

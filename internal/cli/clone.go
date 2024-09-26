@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/microhod/repo/internal/terminal"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
 
@@ -17,7 +16,7 @@ func (app *App) clone(ctx *cli.Context) error {
 	// parse repo
 	repo, err := app.client.ParseRepoFromRemote(rawRemoteURL)
 	if err != nil {
-		return errors.Wrap(err, "failed to parse repo")
+		return fmt.Errorf("parsing repo: %w", err)
 	}
 	path := app.organiser.Organise(repo)
 
@@ -26,7 +25,7 @@ func (app *App) clone(ctx *cli.Context) error {
 		return app.client.Clone(repo, path, nil)
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to clone repo")
+		return fmt.Errorf("cloning repo: %w", err)
 	}
 
 	fmt.Println(repo.Local)
