@@ -1,6 +1,6 @@
 module github.com/microhod/repo
 
-go 1.22
+go 1.23.1
 
 require (
 	github.com/briandowns/spinner v1.23.0
