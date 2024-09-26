@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/whilp/git-urls"
+	"github.com/chainguard-dev/git-urls"
 
 	"github.com/microhod/repo/internal/domain"
 	"github.com/microhod/repo/internal/path"
