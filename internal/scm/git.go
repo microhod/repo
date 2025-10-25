@@ -12,25 +12,28 @@ import (
 
 	"github.com/chainguard-dev/git-urls"
 
-	"github.com/microhod/repo/internal/repo"
 	"github.com/microhod/repo/internal/path"
 )
 
 var cmd func(command string, args ...string) *exec.Cmd = exec.Command
 
 type Git struct {
-	DefaultRemotePrefix string
+	defaultRemotePrefix string
+}
+
+func NewGit(defaultRemotePrefix string) *Git {
+	return &Git{defaultRemotePrefix: defaultRemotePrefix}
 }
 
 // ParseRepoFromRemote parses a repo object from the remote URL (as a raw string)
-func (git *Git) ParseRepoFromRemote(rawURL string) (*repo.Repo, error) {
+func (git *Git) ParseRepoFromRemote(rawURL string) (*Repo, error) {
 	remote, err := giturls.Parse(rawURL)
 	if err != nil {
 		return nil, err
 	}
 	// use default prefix if giturls could not parse the remote url
 	if remote.Scheme == "file" {
-		rawURL = joinURL(git.DefaultRemotePrefix, rawURL)
+		rawURL = joinURL(git.defaultRemotePrefix, rawURL)
 		remote, err = giturls.Parse(rawURL)
 		if err != nil {
 			return nil, err
@@ -40,8 +43,8 @@ func (git *Git) ParseRepoFromRemote(rawURL string) (*repo.Repo, error) {
 	return git.parseRepoFromRemote(remote)
 }
 
-func (git *Git) parseRepoFromRemote(remote *url.URL) (*repo.Repo, error) {
-	repo := &repo.Repo{
+func (git *Git) parseRepoFromRemote(remote *url.URL) (*Repo, error) {
+	repo := &Repo{
 		Remote: remote,
 		Server: remote.Host,
 	}
@@ -87,7 +90,7 @@ func (git *Git) getRemoteURL(path string) (string, error) {
 	return strings.TrimSpace(url), nil
 }
 
-func (git *Git) Clone(repo *repo.Repo, path string, options *CloneOptions) error {
+func (git *Git) Clone(repo *Repo, path string, options *CloneOptions) error {
 	if options == nil {
 		options = &CloneOptions{}
 	}
@@ -101,19 +104,19 @@ func (git *Git) Clone(repo *repo.Repo, path string, options *CloneOptions) error
 	return nil
 }
 
-func (git *Git) FindRepos(base string) ([]*repo.Repo, error) {
+func (git *Git) FindRepos(base string) ([]*Repo, error) {
 	gitdirs, err := path.FindDir(base, ".git")
 	if err != nil {
 		return nil, fmt.Errorf("finding paths to git repos: %w", err)
 	}
 
 	// remove '.git' from the end of the paths
-	paths := []string{}
+	var paths []string
 	for _, dir := range gitdirs {
 		paths = append(paths, filepath.Dir(dir))
 	}
 
-	repos := []*repo.Repo{}
+	var repos []*Repo
 	for _, path := range paths {
 		remote, err := git.getRemoteURL(path)
 		if err != nil {

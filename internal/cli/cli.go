@@ -14,10 +14,8 @@ type App struct {
 
 func NewApp(cfg config.Config) *cli.App {
 	app := &App{
-		cfg: cfg,
-		client: &scm.Git{
-			DefaultRemotePrefix: cfg.Remote.Default.Prefix,
-		},
+		cfg:    cfg,
+		client: scm.NewGit(cfg.Remote.Default.Prefix),
 	}
 	cliApp := &cli.App{
 		Usage: "A cli application to organise scm repositories in a structured hierarchy",

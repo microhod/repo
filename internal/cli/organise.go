@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/microhod/repo/internal/path"
-	"github.com/microhod/repo/internal/repo"
+	"github.com/microhod/repo/internal/scm"
 )
 
 func (app *App) organise(ctx *cli.Context) error {
@@ -22,7 +22,7 @@ func (app *App) organise(ctx *cli.Context) error {
 		}
 	}
 
-	var repos []*repo.Repo
+	var repos []*scm.Repo
 	err = withSpinner("searching for repos...", func() (err error) {
 		repos, err = app.client.FindRepos(basePath)
 		return err
@@ -31,7 +31,7 @@ func (app *App) organise(ctx *cli.Context) error {
 		return fmt.Errorf("finding repos: %w", err)
 	}
 
-	var moves []*repo.Repo
+	var moves []*scm.Repo
 	for _, repo := range repos {
 		// ignore repos which should not move (case insensitive)
 		if !repo.IsOrganised(app.cfg.Local.Root) {
@@ -54,17 +54,17 @@ func (app *App) organise(ctx *cli.Context) error {
 	return nil
 }
 
-func confirmMoves(root string, repo []*repo.Repo) bool {
+func confirmMoves(root string, repos []*scm.Repo) bool {
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
-	for _, r := range repo {
-		fmt.Fprintf(w, "%s\t>\t%s\t\n",
+	for _, r := range repos {
+		fmt.Fprintf(w, "%s\t➤\t%s\t\n",
 			path.CollapseHomeDir(r.Local),
 			path.CollapseHomeDir(r.OrgaisedLocalPath(root)),
 		)
 	}
 	w.Flush()
 
-	fmt.Printf("move the repos as listed above? (y/n): ")
+	fmt.Printf("\nmove the repos as listed above? (y/n): ")
 	var confirm string
 	fmt.Scanln(&confirm)
 	return confirm == "y"
