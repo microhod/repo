@@ -20,7 +20,7 @@ func (app *App) clone(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("parsing repo: %w", err)
 	}
-	path := repo.LocalPath(app.cfg.Local.Root)
+	path := repo.OrgaisedLocalPath(app.cfg.Local.Root)
 
 	// clone
 	err = withSpinner("cloning...", func() error {
@@ -43,12 +43,10 @@ func withSpinner(message string, f func() error) error {
 	)
 	s.Color("blue")
 	s.Suffix = " " + message
-
 	// clear terminal line after spinner is stopped
 	s.FinalMSG = "\033[2K\r"
-	spinner := NewSpinner(message)
-	spinner.Start()
-	err := f()
-	spinner.Stop()
-	return err
+
+	s.Start()
+	defer s.Stop()
+	return f()
 }

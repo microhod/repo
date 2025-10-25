@@ -3,15 +3,12 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
+	"text/tabwriter"
 
-	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
 
-	"github.com/microhod/repo/internal/repo"
 	"github.com/microhod/repo/internal/path"
-	"github.com/microhod/repo/internal/terminal"
+	"github.com/microhod/repo/internal/repo"
 )
 
 func (app *App) organise(ctx *cli.Context) error {
@@ -26,7 +23,7 @@ func (app *App) organise(ctx *cli.Context) error {
 	}
 
 	var repos []*repo.Repo
-	err = terminal.WithSpinner("searching for repos...", func() (err error) {
+	err = withSpinner("searching for repos...", func() (err error) {
 		repos, err = app.client.FindRepos(basePath)
 		return err
 	})
@@ -34,31 +31,22 @@ func (app *App) organise(ctx *cli.Context) error {
 		return fmt.Errorf("finding repos: %w", err)
 	}
 
-	var moves []Move
+	var moves []*repo.Repo
 	for _, repo := range repos {
-		organised := repo.LocalPath(app.cfg.Local.Root)
 		// ignore repos which should not move (case insensitive)
-		if !strings.EqualFold(organised, repo.Local) {
-			moves = append(moves, Move{
-				Repo:           repo,
-				OrganisedLocal: organised,
-			})
+		if !repo.IsOrganised(app.cfg.Local.Root) {
+			moves = append(moves, repo)
 		}
 	}
 	if len(moves) == 0 {
 		return nil
 	}
 
-	fmt.Println(Table(moves))
-	fmt.Printf("move the repos as listed above? (y/n): ")
-	var confirm string
-	fmt.Scanln(&confirm)
-	if confirm != "y" {
+	if !confirmMoves(app.cfg.Local.Root, moves) {
 		return nil
 	}
-
-	for _, move := range moves {
-		if err := move.Do(); err != nil {
+	for _, r := range moves {
+		if err := r.Organise(app.cfg.Local.Root); err != nil {
 			return err
 		}
 	}
@@ -66,35 +54,18 @@ func (app *App) organise(ctx *cli.Context) error {
 	return nil
 }
 
-type Move struct {
-	Repo           *repo.Repo
-	OrganisedLocal string
-}
-
-func (move Move) Do() error {
-	// make parent directories for new path
-	if err := os.MkdirAll(filepath.Dir(move.OrganisedLocal), os.ModePerm); err != nil {
-		return err
+func confirmMoves(root string, repo []*repo.Repo) bool {
+	w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
+	for _, r := range repo {
+		fmt.Fprintf(w, "%s\t>\t%s\t\n",
+			path.CollapseHomeDir(r.Local),
+			path.CollapseHomeDir(r.OrgaisedLocalPath(root)),
+		)
 	}
-	return os.Rename(move.Repo.Local, move.OrganisedLocal)
-}
+	w.Flush()
 
-func Table(moves []Move) string {
-	builder := new(strings.Builder)
-	builder.WriteByte('\n')
-
-	table := tablewriter.NewWriter(builder)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetColumnSeparator("➤")
-	table.SetBorder(false)
-
-	for _, m := range moves {
-		table.Append([]string{
-			path.CollapseHomeDir(m.Repo.Local),
-			path.CollapseHomeDir(m.OrganisedLocal),
-		})
-	}
-
-	table.Render()
-	return builder.String()
+	fmt.Printf("move the repos as listed above? (y/n): ")
+	var confirm string
+	fmt.Scanln(&confirm)
+	return confirm == "y"
 }
