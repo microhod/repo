@@ -1,6 +1,7 @@
 package scm
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -11,7 +12,7 @@ import (
 
 	"github.com/chainguard-dev/git-urls"
 
-	"github.com/microhod/repo/internal/domain"
+	"github.com/microhod/repo/internal/repo"
 	"github.com/microhod/repo/internal/path"
 )
 
@@ -22,7 +23,7 @@ type Git struct {
 }
 
 // ParseRepoFromRemote parses a repo object from the remote URL (as a raw string)
-func (git *Git) ParseRepoFromRemote(rawURL string) (*domain.Repo, error) {
+func (git *Git) ParseRepoFromRemote(rawURL string) (*repo.Repo, error) {
 	remote, err := giturls.Parse(rawURL)
 	if err != nil {
 		return nil, err
@@ -39,8 +40,8 @@ func (git *Git) ParseRepoFromRemote(rawURL string) (*domain.Repo, error) {
 	return git.parseRepoFromRemote(remote)
 }
 
-func (git *Git) parseRepoFromRemote(remote *url.URL) (*domain.Repo, error) {
-	repo := &domain.Repo{
+func (git *Git) parseRepoFromRemote(remote *url.URL) (*repo.Repo, error) {
+	repo := &repo.Repo{
 		Remote: remote,
 		Server: remote.Host,
 	}
@@ -86,7 +87,7 @@ func (git *Git) getRemoteURL(path string) (string, error) {
 	return strings.TrimSpace(url), nil
 }
 
-func (git *Git) Clone(repo *domain.Repo, path string, options *CloneOptions) error {
+func (git *Git) Clone(repo *repo.Repo, path string, options *CloneOptions) error {
 	if options == nil {
 		options = &CloneOptions{}
 	}
@@ -100,7 +101,7 @@ func (git *Git) Clone(repo *domain.Repo, path string, options *CloneOptions) err
 	return nil
 }
 
-func (git *Git) FindRepos(base string) ([]*domain.Repo, error) {
+func (git *Git) FindRepos(base string) ([]*repo.Repo, error) {
 	gitdirs, err := path.FindDir(base, ".git")
 	if err != nil {
 		return nil, fmt.Errorf("finding paths to git repos: %w", err)
@@ -112,7 +113,7 @@ func (git *Git) FindRepos(base string) ([]*domain.Repo, error) {
 		paths = append(paths, filepath.Dir(dir))
 	}
 
-	repos := []*domain.Repo{}
+	repos := []*repo.Repo{}
 	for _, path := range paths {
 		remote, err := git.getRemoteURL(path)
 		if err != nil {
@@ -156,7 +157,7 @@ func (git *Git) exec(progress io.Writer, args ...string) (string, error) {
 	}
 
 	if err := cmd.Run(); err != nil {
-		return stdout.String(), fmt.Errorf(stderr.String())
+		return stdout.String(), errors.New(stderr.String())
 	}
 
 	return stdout.String(), nil

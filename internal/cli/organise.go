@@ -9,7 +9,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
 
-	"github.com/microhod/repo/internal/domain"
+	"github.com/microhod/repo/internal/repo"
 	"github.com/microhod/repo/internal/path"
 	"github.com/microhod/repo/internal/terminal"
 )
@@ -25,7 +25,7 @@ func (app *App) organise(ctx *cli.Context) error {
 		}
 	}
 
-	var repos []*domain.Repo
+	var repos []*repo.Repo
 	err = terminal.WithSpinner("searching for repos...", func() (err error) {
 		repos, err = app.client.FindRepos(basePath)
 		return err
@@ -36,7 +36,7 @@ func (app *App) organise(ctx *cli.Context) error {
 
 	moves := []Move{}
 	for _, repo := range repos {
-		organised := app.organiser.Organise(repo)
+		organised := repo.LocalPath(app.cfg.Local.Root)
 		// ignore repos which should not move (case insensitive)
 		if !strings.EqualFold(organised, repo.Local) {
 			moves = append(moves, Move{
@@ -70,7 +70,7 @@ func (app *App) organise(ctx *cli.Context) error {
 }
 
 type Move struct {
-	Repo           *domain.Repo
+	Repo           *repo.Repo
 	OrganisedLocal string
 }
 

@@ -18,7 +18,7 @@ func (app *App) clone(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("parsing repo: %w", err)
 	}
-	path := app.organiser.Organise(repo)
+	path := repo.LocalPath(app.cfg.Local.Root)
 
 	// clone
 	err = terminal.WithSpinner("cloning...", func() error {
