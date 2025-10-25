@@ -1,29 +1,28 @@
-// Package path deals with local file paths
 package path
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	stdpath "path"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"golang.org/x/sync/errgroup"
 )
 
 func Clean(path string) string {
-	path = stdpath.Clean(path)
-
+	// expand home dir
 	if strings.HasPrefix(path, "~") {
 		homedir, _ := os.UserHomeDir()
 		path = strings.Replace(path, "~", homedir, 1)
 	}
-
-	return path
+	return stdpath.Clean(path)
 }
 
-func CollapseUserDir(path string) string {
+func CollapseHomeDir(path string) string {
 	homedir, _ := os.UserHomeDir()
 	if homedir == "" {
 		return path
@@ -31,31 +30,29 @@ func CollapseUserDir(path string) string {
 	if !strings.HasPrefix(path, homedir) {
 		return path
 	}
-
-	path = strings.Replace(path, homedir, "~", 1)
-
-	return path
+	return strings.Replace(path, homedir, "~", 1)
 }
 
+// FindDir finds directories with the name 'dir' in 'base'.
+// Nested matches are ignored e.g. if dir=b nd /a/b/ matches, then /a/b/c/b will be ignored
 func FindDir(base, dir string) ([]string, error) {
-	dirs, err := GetDirs(base)
+	// get top level directories
+	dirs, err := getDirs(base)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting dirs in [%s]: %w", base, err)
 	}
 
 	results := make(chan []string, len(dirs))
-	paths := []string{}
+	var paths []string
 
-	read := &errgroup.Group{}
-	read.Go(func() error {
+	read := new(sync.WaitGroup)
+	read.Go(func() {
 		for r := range results {
 			paths = append(paths, r...)
 		}
-		return nil
 	})
-
-	// search concurrently through each top level folder
-	write := &errgroup.Group{}
+	// search concurrently through each top level directory
+	write := new(errgroup.Group)
 	for i := range dirs {
 		d := dirs[i]
 		write.Go(func() error {
@@ -65,7 +62,7 @@ func FindDir(base, dir string) ([]string, error) {
 		})
 	}
 	if err := write.Wait(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("searching for [%s] in [%s]: %w", dir, base, err)
 	}
 	close(results)
 
@@ -74,28 +71,25 @@ func FindDir(base, dir string) ([]string, error) {
 }
 
 func findDir(base, dir string) ([]string, error) {
-	paths := []string{}
+	var paths []string
 	err := filepath.WalkDir(base, func(path string, d fs.DirEntry, er error) error {
 		if d == nil || !d.IsDir() {
 			return nil
 		}
 
-		dirs, err := GetDirs(path)
-		if errors.Is(err, fs.ErrPermission) {
-			// skip folder if there are permission errors
-			return filepath.SkipDir
-		}
-		if errors.Is(err, fs.ErrNotExist) {
-			// skip folder if it does not exist
+		dirs, err := getDirs(path)
+		if errors.Is(err, fs.ErrPermission) || errors.Is(err, fs.ErrNotExist) {
+			// skip folder if there are permission errors / folder does not exist
 			return filepath.SkipDir
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("searching [%s]: %w", path, err)
 		}
 
 		for _, d := range dirs {
 			if d == dir {
 				paths = append(paths, stdpath.Join(path, d))
+				// ignore nested matches
 				return filepath.SkipDir
 			}
 		}
@@ -104,16 +98,19 @@ func findDir(base, dir string) ([]string, error) {
 	return paths, err
 }
 
-func GetDirs(path string) ([]string, error) {
-	file, err := os.Open(path)
+func getDirs(path string) ([]string, error) {
+	dirs, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
 
-	dirs, err := file.Readdirnames(0)
-	if err != nil {
-		return nil, err
+	var paths []string
+	for _, d := range dirs {
+		if !d.IsDir() {
+			continue
+		}
+		paths = append(paths, d.Name())
+
 	}
-	return dirs, nil
+	return paths, nil
 }

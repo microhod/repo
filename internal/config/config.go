@@ -1,22 +1,17 @@
-// Package config contains code for config parsing
 package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/microhod/repo/internal/path"
 )
 
-const (
-	configFolder = "~/.config/repo"
-	configFile   = "config.json"
-)
-
 var (
-	ConfigFolder = path.Clean(configFolder)
-	ConfigFile   = path.Clean(fmt.Sprintf("%s/%s", configFolder, configFile))
+	configFolder = path.Clean("~/.config/repo")
+	configFile   = path.Clean(fmt.Sprintf("%s/config.json", configFolder))
 
 	defaultConfig = Config{
 		Remote: RemoteConfig{
@@ -49,35 +44,41 @@ type LocalConfig struct {
 
 func Parse() (Config, error) {
 	if err := writeDefaultConfig(); err != nil {
-		return Config{}, err
+		return Config{}, fmt.Errorf("writing default cfg: %w", err)
 	}
-	file, err := os.ReadFile(ConfigFile)
+
+	f, err := os.Open(configFile)
 	if err != nil {
-		return Config{}, err
+		return Config{}, fmt.Errorf("open cfg: %w", err)
 	}
-	cfg := &Config{}
-	if err := json.Unmarshal(file, cfg); err != nil {
-		return Config{}, err
+	defer f.Close()
+
+	var cfg Config
+	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
+		return Config{}, fmt.Errorf("unmarshal: %w", err)
 	}
-	return *cfg, nil
+	return cfg, nil
 }
 
 func writeDefaultConfig() error {
-	if _, err := os.Stat(ConfigFile); !os.IsNotExist(err) {
+	_, err := os.Stat(configFile)
+	if err == nil {
+		// exit early if a config file already exists
 		return nil
 	}
-	if err := os.MkdirAll(ConfigFolder, os.ModePerm); err != nil {
-		return err
-	}
-	file, err := os.Create(ConfigFile)
-	if err != nil {
-		return err
+	if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("checking cfg file exists: %w", err)
 	}
 
+	if err := os.MkdirAll(configFolder, os.ModePerm); err != nil {
+		return fmt.Errorf("creating config dir: %w", err)
+	}
 	cfg, err := json.MarshalIndent(defaultConfig, "", "    ")
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal cfg: %w", err)
 	}
-	_, err = file.Write(cfg)
-	return err
+	if err := os.WriteFile(configFile, cfg, 0644); err != nil {
+		return fmt.Errorf("writing cfg: %w", err)
+	}
+	return nil
 }

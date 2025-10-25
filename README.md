@@ -28,7 +28,7 @@ GLOBAL OPTIONS:
 
 ### Compile from Source
 
-* Install [golang](https://golang.org/doc/install) `1.22` or later
+* Install [golang](https://golang.org/doc/install) `1.25` or later
 * Run `go install github.com/microhod/repo@latest` to download and install the binary (this will install to `~/go/bin`)
 
 ## Config
@@ -52,8 +52,5 @@ The default configuration is as below:
 
 ## Todo
 
-- [ ] More complete docs
-- [ ] Tests!!!
-- [ ] `--dry-run` option for `organise`
 - [ ] `--verbose` option for all commands
 - [ ] add `profile` command generate terminal profile for utlity commands

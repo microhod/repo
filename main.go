@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/microhod/repo/internal/cli"
@@ -9,15 +9,15 @@ import (
 )
 
 func main() {
-	// disable all log formatting e.g. timestamps
-	log.SetFlags(0)
 	// parse config
 	cfg, err := config.Parse()
 	if err != nil {
-		log.Fatalf("failed to parse config: %s\n", err.Error())
+		fmt.Printf("ERROR: failed to parse config: %s\n", err.Error())
+		os.Exit(1)
 	}
 	// run cli app
 	if err := cli.NewApp(cfg).Run(os.Args); err != nil {
-		log.Fatalf("ERROR: %s\n", err)
+		fmt.Printf("ERROR: %s\n", err)
+		os.Exit(1)
 	}
 }
