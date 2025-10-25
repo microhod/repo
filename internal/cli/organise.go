@@ -34,7 +34,7 @@ func (app *App) organise(ctx *cli.Context) error {
 		return fmt.Errorf("finding repos: %w", err)
 	}
 
-	moves := []Move{}
+	var moves []Move
 	for _, repo := range repos {
 		organised := repo.LocalPath(app.cfg.Local.Root)
 		// ignore repos which should not move (case insensitive)
@@ -45,12 +45,11 @@ func (app *App) organise(ctx *cli.Context) error {
 			})
 		}
 	}
-	if len(moves) < 1 {
+	if len(moves) == 0 {
 		return nil
 	}
 
 	fmt.Println(Table(moves))
-
 	fmt.Printf("move the repos as listed above? (y/n): ")
 	var confirm string
 	fmt.Scanln(&confirm)
@@ -63,9 +62,7 @@ func (app *App) organise(ctx *cli.Context) error {
 			return err
 		}
 	}
-
 	fmt.Println("done 🎉")
-
 	return nil
 }
 
@@ -83,7 +80,7 @@ func (move Move) Do() error {
 }
 
 func Table(moves []Move) string {
-	builder := &strings.Builder{}
+	builder := new(strings.Builder)
 	builder.WriteByte('\n')
 
 	table := tablewriter.NewWriter(builder)

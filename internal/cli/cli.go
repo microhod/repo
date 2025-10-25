@@ -1,4 +1,3 @@
-// Package cli describes the command line application
 package cli
 
 import (
@@ -9,16 +8,16 @@ import (
 )
 
 type App struct {
-	client scm.Client
 	cfg    config.Config
+	client scm.Client
 }
 
 func NewApp(cfg config.Config) *cli.App {
 	app := &App{
+		cfg: cfg,
 		client: &scm.Git{
 			DefaultRemotePrefix: cfg.Remote.Default.Prefix,
 		},
-		cfg: cfg,
 	}
 	cliApp := &cli.App{
 		Usage: "A cli application to organise scm repositories in a structured hierarchy",

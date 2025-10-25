@@ -2,8 +2,10 @@ package cli
 
 import (
 	"fmt"
+	"os"
+	"time"
 
-	"github.com/microhod/repo/internal/terminal"
+	"github.com/briandowns/spinner"
 	"github.com/urfave/cli/v2"
 )
 
@@ -21,7 +23,7 @@ func (app *App) clone(ctx *cli.Context) error {
 	path := repo.LocalPath(app.cfg.Local.Root)
 
 	// clone
-	err = terminal.WithSpinner("cloning...", func() error {
+	err = withSpinner("cloning...", func() error {
 		return app.client.Clone(repo, path, nil)
 	})
 	if err != nil {
@@ -29,6 +31,24 @@ func (app *App) clone(ctx *cli.Context) error {
 	}
 
 	fmt.Println(repo.Local)
-
 	return nil
+}
+
+func withSpinner(message string, f func() error) error {
+	// create basic spinner coloured spinner
+	s := spinner.New(
+		[]string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
+		100*time.Millisecond,
+		spinner.WithWriter(os.Stderr),
+	)
+	s.Color("blue")
+	s.Suffix = " " + message
+
+	// clear terminal line after spinner is stopped
+	s.FinalMSG = "\033[2K\r"
+	spinner := NewSpinner(message)
+	spinner.Start()
+	err := f()
+	spinner.Stop()
+	return err
 }
