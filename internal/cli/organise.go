@@ -93,8 +93,8 @@ func Table(moves []Move) string {
 
 	for _, m := range moves {
 		table.Append([]string{
-			path.CollapseUserDir(m.Repo.Local),
-			path.CollapseUserDir(m.OrganisedLocal),
+			path.CollapseHomeDir(m.Repo.Local),
+			path.CollapseHomeDir(m.OrganisedLocal),
 		})
 	}
 

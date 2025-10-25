@@ -51,6 +51,8 @@ func Parse() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("open cfg: %w", err)
 	}
+	defer f.Close()
+
 	var cfg Config
 	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
 		return Config{}, fmt.Errorf("unmarshal: %w", err)
