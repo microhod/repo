@@ -4,6 +4,8 @@
 
 For example, `github.com/microhod/repo.git` would be stored at `~/src/github.com/microhod/repo`.
 
+<img width="600" alt="image" src="https://github.com/user-attachments/assets/7287e824-b44f-4686-9d40-dbb9545a43f7" />
+
 ## Usage
 
 Run `repo --help` to see full CLI usage.
