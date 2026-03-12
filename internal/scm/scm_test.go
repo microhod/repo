@@ -3,8 +3,8 @@ package scm
 import (
 	"errors"
 	"os"
-	"testing"
 	"path"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -87,12 +87,12 @@ func TestRepo_Move(t *testing.T) {
 	require.NoError(t, err, "first organise should not fail")
 	require.Equal(t, expectedPath, repo.Local, "first organise should edit repo local path")
 	_, err = os.Stat(expectedPath)
-	require.NoError(t, err, "first organise should move folder") 
+	require.NoError(t, err, "first organise should move folder")
 
 	// 2nd organise (shoud be no-op)
 	err = repo.Organise(testDir)
 	require.NoError(t, err, "second organise should not fail")
 	require.Equal(t, expectedPath, repo.Local, "second organise should not edit repo local path")
 	_, err = os.Stat(expectedPath)
-	require.NoError(t, err, "second organise should not move folder") 
+	require.NoError(t, err, "second organise should not move folder")
 }

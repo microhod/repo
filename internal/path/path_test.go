@@ -65,14 +65,14 @@ func TestCollapseHomeDir(t *testing.T) {
 
 func TestFindDir(t *testing.T) {
 	/*
-	testdir
-	├── a
-	│   ├── aa
-	│   │   └── findme  <- nested matches should be ignored
-	│   └── findme
-	├── b
-	│   └── findme
-	└── c.txt
+		testdir
+		├── a
+		│   ├── aa
+		│   │   └── findme  <- nested matches should be ignored
+		│   └── findme
+		├── b
+		│   └── findme
+		└── c.txt
 	*/
 	wd, err := os.Getwd()
 	require.NoError(t, err)
