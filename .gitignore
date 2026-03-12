@@ -16,3 +16,6 @@
 
 # tmp test dir
 testdata/tmp
+
+# Added by goreleaser init:
+dist/
